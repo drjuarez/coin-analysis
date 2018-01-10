@@ -4,10 +4,14 @@ import pprint
 from datetime import datetime
 import re
 from collections import Counter
+import pandas as pd
+import utility
 
 # Global
 # ------------------------------
 NUMBER_OF_POSTS=10
+# grabs all tickers with 3 or 4 capital letters
+REGEX = [r'\b[A-Z]{3,4}\b[.!?]?']
 SUBREDDITS = ['cryptocurrencies', 'cryptomarkets','altcoin']
 
 # Reddit API
@@ -15,26 +19,28 @@ r = praw.Reddit(client_id='kOTul76pBBTGLA',
                      client_secret='dgDZ-iWlVCEoihbP2oLz66e-Q3A',
                      password='tothemoon123',
                      user='getrichaf',
-                     user_agent='coin analysis bot by /u/getsdfsdfafrichaf')
+                     user_agent='coin analysis bot by /u/getrichaf')
 
-# ------------------------------
+# =================================
 
-def get_top_comments(subreddit):
+def get_tickers_from(subreddit):
     sr = r.subreddit(subreddit)
-    i=0
+    tickers_in_subreddit = []
+
     # TODO: catch errors thrown from dropped connection
     for post in sr.hot(limit=NUMBER_OF_POSTS):
-        # Flatten all the comments
-        post.comments.replace_more(limit=None)
+        try:
+            # Flatten all the comments
+            post.comments.replace_more(limit=None)
 
-        for comment in post.comments.list():
-            print(comment)
+            for comment in post.comments.list():
+                tickers_in_subreddit.append(use_regex(REGEX, comment.body))
+        except Exception, e:
+            print('we done fooged', e)
+            continue
+    return tickers_in_subreddit
 
-start_time = datetime.now()
-
-# ------------------------------
-
-def re_find_func(patterns,phrase):
+def use_regex(patterns,phrase):
     '''
     Take in a list of patterns
     Returns list of matches
@@ -50,8 +56,10 @@ def re_find_func(patterns,phrase):
 
     return tickers_list
 
-# START HERE--------
 
+
+# Main
+# ------------------------------
 # Steps:
 # 1- Create a default dictionary (data structure that counts each of the mentions from the ticker )
 # 2- Create a regular expression that grabs any group of capital letters (either 2 or 3 or 4 capitalized letters)
@@ -63,17 +71,23 @@ def re_find_func(patterns,phrase):
 # Begin iterating through each of the SUBREDDITS here and call get_top_comments function for each subreddit
 # e.g. Below
 
-example = 'These are the tickers that I am trying to find: IOTA. BTC ETH! BTC BTC LTC ETH ETH XLM IOTA! XRB LSMR'
 
-ticker_pat = [r'\b[A-Z]{3,4}\b[.!?]?'] # grabs all tickers with 3 or 4 capital letters
+start_time = datetime.now()
+ticker_array = []
 
-tickers = re_find_func(ticker_pat,example)
-ticker_count = dict(Counter(tickers))
-print(ticker_count)
+for subreddit in SUBREDDITS:
 
-#for i in SUBREDDITS:
-#    top_comments = get_top_comments(i)
-#    tickers = re_find_func(ticker_pat,top_comments)
-#    ticker_count = dict(Counter(tickers))
+    tickers_from_comments = get_tickers_from(subreddit)
+    # Flatten out array
+    ticker_array.append([item for sublist in tickers_from_comments for item in sublist])
 
-print(datetime.now() - start_time)
+flattened_ticker_array = [item for sublist in ticker_array for item in sublist]
+ticker_count = dict(Counter(flattened_ticker_array))
+ticker_df = pd.Series(ticker_count, name='count')
+ticker_df.to_csv('tickerCounts.csv')
+pdb.set_trace()
+
+print('script execution:', datetime.now() - start_time)
+
+
+# get_top_comments('altcoin')
