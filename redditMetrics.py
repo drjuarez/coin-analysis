@@ -9,7 +9,7 @@ import utility
 
 # Global
 # ------------------------------
-NUMBER_OF_POSTS=10
+NUMBER_OF_POSTS=1000
 # grabs all tickers with 3 or 4 capital letters
 REGEX = [r'\b[A-Z]{3,4}\b[.!?]?']
 SUBREDDITS = ['cryptocurrencies', 'cryptomarkets','altcoin']
@@ -35,8 +35,8 @@ def get_tickers_from(subreddit):
 
             for comment in post.comments.list():
                 tickers_in_subreddit.append(use_regex(REGEX, comment.body))
-        except Exception, e:
-            print('we done fooged', e)
+        except Exception:
+            print('we done fooged')
             continue
     return tickers_in_subreddit
 
@@ -83,11 +83,8 @@ for subreddit in SUBREDDITS:
 
 flattened_ticker_array = [item for sublist in ticker_array for item in sublist]
 ticker_count = dict(Counter(flattened_ticker_array))
-ticker_df = pd.Series(ticker_count, name='count')
+ticker_df = pd.Series(ticker_count, name='count').to_frame()
+ticker_df['date'] = datetime.now()
 ticker_df.to_csv('tickerCounts.csv')
-pdb.set_trace()
 
 print('script execution:', datetime.now() - start_time)
-
-
-# get_top_comments('altcoin')
